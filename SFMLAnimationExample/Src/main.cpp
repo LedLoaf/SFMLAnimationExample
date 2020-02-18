@@ -170,10 +170,11 @@ int main() {
 
 				if(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
 					speed=200;
-					
+					setFrameTime(&walkAnims,0.05f);
 				}
 				else {
 					speed=100;
+					setFrameTime(&walkAnims,0.1f);
 				}
 	
 
