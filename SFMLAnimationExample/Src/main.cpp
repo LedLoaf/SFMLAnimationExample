@@ -7,9 +7,21 @@ using namespace std;
 sf::Vector2u WINDOW_SIZE{1400,900};
 constexpr unsigned TPS = 60; //ticks per seconds
 const sf::Time  timePerUpdate = sf::seconds(1.0f / float(TPS));
+sf::Vector2i WORLD_SIZE{32,32};
 sf::Vector2f TILE_SIZE{64.f,64.f};
 
-enum Dir{Down,Left,Up,Right};
+enum class Dir{Down,Left,Up,Right,upLeft,upRight,downLeft,downRight};
+
+struct Tile {
+	sf::Sprite sprite;
+	sf::Vector2i position;
+};
+
+void setFrameTime(std::vector<Animation>* v, float frameTime) {
+	for(auto& it : *v) {
+		it.setFrameTime(frameTime);
+	}
+}
 
 int main() {
 	sf::RenderWindow window{sf::VideoMode{WINDOW_SIZE.x,WINDOW_SIZE.y},"SFML BoilerPlate"};
@@ -22,14 +34,12 @@ int main() {
 	auto dt = 0.f;
 	unsigned ticks = 0;
 	auto view = window.getDefaultView();
-	
-	sf::CircleShape shape{TILE_SIZE.x/3.f};
-	shape.setPosition((float)WINDOW_SIZE.x/2.f,(float)WINDOW_SIZE.y/2.f);
+	;
 	auto speed = 100.f;
 	bool lostFocus = false;
 
 	sf::Font font;
-	if(!font.loadFromFile("../../arial.ttf"))
+	if(!font.loadFromFile("assets/arial.ttf"))
 		std::cout<<"Failed to load arial.ttf\n";
 	FPSCounter fpsCounter{};
 	fpsCounter.setFont(&font);
@@ -38,7 +48,10 @@ int main() {
 	Animation downWalk;
 	Animation leftWalk;
 	Animation rightWalk;
-
+	Animation upLeftWalk;
+	Animation upRightWalk;
+	Animation downLeftWalk;
+	Animation downRightWalk;
 
 	for (int i = 0; i < 6 ; i++)
      {
@@ -46,23 +59,39 @@ int main() {
 		leftWalk.addFrame({i*128,192*2,128,192},0.1);
 		upWalk.addFrame({i*128,192*4,128,192},0.1);
 		rightWalk.addFrame({i*128,192*6,128,192},0.1);
+		
+		downLeftWalk.addFrame({i*128,192*1,128,192},0.1);
+		upLeftWalk.addFrame({i*128,192*3,128,192},0.1);
+		upRightWalk.addFrame({i*128,192*5,128,192},0.1);
+		downRightWalk.addFrame({i*128,192*7,128,192},0.1);	
 	}
+
+	std::vector<Animation> walkAnims{downWalk,leftWalk,upWalk,rightWalk,downLeftWalk,upLeftWalk, upRightWalk, downRightWalk};
 
 	Animation upIdle;
 	Animation downIdle;
 	Animation leftIdle;
 	Animation rightIdle;
+	Animation upLeftIdle;
+	Animation upRightIdle;
+	Animation downLeftIdle;
+	Animation downRightIdle;
+	
 	for (int i = 0; i < 6 ; i++)
      {
 		downIdle.addFrame({i*128,0,128,192},0.1);
 		leftIdle.addFrame({i*128,192*2,128,192},0.1);
 		upIdle.addFrame({i*128,192*4,128,192},0.1);
 		rightIdle.addFrame({i*128,192*6,128,192},0.1);
+		
+		downLeftIdle.addFrame({i*128,192*1,128,192},0.1);
+		upLeftIdle.addFrame({i*128,192*3,128,192},0.1);
+		upRightIdle.addFrame({i*128,192*5,128,192},0.1);
+		downRightIdle.addFrame({i*128,192*7,128,192},0.1);	
 	}
 
 	sf::Texture texWalk;
 	texWalk.loadFromFile("WizardWalkRight.png");
-
 	sf::Texture texIdle;
 	texIdle.loadFromFile("WizardIdleRight.png");
 	
@@ -70,7 +99,24 @@ int main() {
 	spr.setPosition((float)WINDOW_SIZE.x/2.f,(float)WINDOW_SIZE.y/2.f);
 	spr.setTextureRect(downIdle.getFrame());
 
-	Dir dir = Dir::Down;
+	std::vector<std::vector<Tile>> worldMap;
+
+	sf::Texture texTiles;
+	texTiles.loadFromFile("assets/tilea4.png");
+	
+	for(auto x = 0; x < WORLD_SIZE.x; x++) {
+		worldMap.emplace_back();
+		for(auto y = 0; y < WORLD_SIZE.y; y++) {
+			auto tile = new Tile;
+			tile->sprite.setTexture(texTiles);
+			tile->sprite.setTextureRect({static_cast<int>(TILE_SIZE.x) * 6, 32,static_cast<int>(TILE_SIZE.x),static_cast<int>(TILE_SIZE.y)});
+			tile->position = {x,y};
+			worldMap[x].push_back(*tile);		
+		}
+	}
+
+	
+	auto dir = Dir::Down;
 	
 	while (window.isOpen()) {
 
@@ -122,42 +168,86 @@ int main() {
 					}
 				}
 
+				if(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
+					speed=200;
+					
+				}
+				else {
+					speed=100;
+				}
+	
+
 				//! ** INPUT SECTION **
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+				if(sf::Keyboard::isKeyPressed(sf::Keyboard::W) && sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
 					spr.setTexture(texWalk);
-					spr.setTextureRect(upWalk.getFrame());			
+					spr.setTextureRect(walkAnims[5].getFrame());			
+					spr.move(-speed * timePerUpdate.asSeconds(), -speed * timePerUpdate.asSeconds());
+					dir = Dir::upLeft;
+				}
+				else if(sf::Keyboard::isKeyPressed(sf::Keyboard::W) && sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+					spr.setTexture(texWalk);
+					spr.setTextureRect(walkAnims[6].getFrame());			
+					spr.move(speed * timePerUpdate.asSeconds(), -speed * timePerUpdate.asSeconds());
+
+					dir = Dir::upRight;
+				}
+				else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S) && sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+					spr.setTexture(texWalk);
+					spr.setTextureRect(walkAnims[4].getFrame());			
+					spr.move(-speed * timePerUpdate.asSeconds(), speed * timePerUpdate.asSeconds());
+
+					dir = Dir::downLeft;
+				}
+				else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S) && sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+					spr.setTexture(texWalk);
+					spr.setTextureRect(walkAnims[7].getFrame());			
+					spr.move(speed * timePerUpdate.asSeconds(), speed * timePerUpdate.asSeconds());
+
+					dir = Dir::downRight;
+				}
+				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+					spr.setTexture(texWalk);
+					spr.setTextureRect(walkAnims[2].getFrame());			
 					spr.move(0.f, -speed * timePerUpdate.asSeconds());
 					dir = Dir::Up;
 				}
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
 					spr.setTexture(texWalk);
-					spr.setTextureRect(leftWalk.getFrame());
+					spr.setTextureRect(walkAnims[1].getFrame());
 					spr.move(-speed * timePerUpdate.asSeconds(), 0.f);
 					dir = Dir::Left;
 				}
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
 					spr.setTexture(texWalk);
-					spr.setTextureRect(downWalk.getFrame());
+					spr.setTextureRect(walkAnims[0].getFrame());
 					spr.move(0.f, speed * timePerUpdate.asSeconds());
 					dir = Dir::Down;
 				}
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
 					spr.setTexture(texWalk);
-					spr.setTextureRect(rightWalk.getFrame());
+					spr.setTextureRect(walkAnims[3].getFrame());
 					spr.move(speed * timePerUpdate.asSeconds(), 0.f);
 					dir = Dir::Right;
 				}
 				else {
 					spr.setTexture(texIdle);
 					
-					if(dir == Down)
+					if(dir == Dir::Down)
 						spr.setTextureRect(downIdle.getFrame());
-					else 	if(dir == Left)
+					else if(dir == Dir::Left)
 						spr.setTextureRect(leftIdle.getFrame());
-					else 	if(dir == Up)
+					else if(dir == Dir::Up)
 						spr.setTextureRect(upIdle.getFrame());
-					else 	if(dir == Right)
+					else if(dir == Dir::Right)
 						spr.setTextureRect(rightIdle.getFrame());
+					else if(dir == Dir::downLeft)
+						spr.setTextureRect(downLeftIdle.getFrame());
+					else if(dir == Dir::upLeft)
+						spr.setTextureRect(upLeftIdle.getFrame());
+					else if(dir == Dir::downRight)
+						spr.setTextureRect(downRightIdle.getFrame());
+					else if(dir == Dir::upRight)
+						spr.setTextureRect(upRightIdle.getFrame());
 				}
 
 				//! ** UPDATE SECTION**
@@ -180,7 +270,12 @@ int main() {
 				}
 			}
 
-			window.draw(shape);
+			for(auto it : worldMap) {
+				for(auto tile : it) {
+					tile.sprite.setPosition(tile.position.x * TILE_SIZE.x,tile.position.y*TILE_SIZE.y);
+					window.draw(tile.sprite);
+				}
+			}
 			window.draw(spr);
 
 			window.setView(window.getDefaultView());

@@ -15,6 +15,7 @@ class Animation
 public:
 	void addFrame(const sf::IntRect& frame, float timeToNextFrame);
 	const sf::IntRect getFrame();
+	void setFrameTime(float frameTime);
 private:
 	std::vector<Frame> m_frames;
 	sf::Clock   m_timer;

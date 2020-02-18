@@ -22,3 +22,9 @@ const sf::IntRect Animation::getFrame()
 
     return  m_frames[m_currentFrame].frame;
 }
+
+void Animation::setFrameTime(float frameTime) {
+    for(auto& it : m_frames) {
+        it.timeToNextFrame=frameTime;
+    }
+}
